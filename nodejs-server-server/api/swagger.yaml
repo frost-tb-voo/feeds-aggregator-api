@@ -1,0 +1,103 @@
+---
+swagger: "2.0"
+info:
+  description: ""
+  version: "1.0.0"
+  title: "Feeds aggregator API"
+  termsOfService: "https://github.com/frost-tb-voo"
+basePath: "/api"
+schemes:
+- "http"
+- "https"
+paths:
+  /feeds:
+    get:
+      operationId: "readFeed"
+      produces:
+      - "application/json"
+      parameters: []
+      responses:
+        200:
+          description: "successful operation"
+          schema: {}
+        400:
+          description: "Invalid Feedname/password supplied"
+      x-swagger-router-controller: "Default"
+    post:
+      operationId: "createFeed"
+      produces:
+      - "application/json"
+      parameters:
+      - in: "body"
+        name: "body"
+        required: true
+        schema:
+          $ref: "#/definitions/Feed"
+      responses:
+        default:
+          description: "successful operation"
+      x-swagger-router-controller: "Default"
+  /feeds/{feed_id}:
+    put:
+      operationId: "updateFeed"
+      produces:
+      - "application/json"
+      parameters:
+      - name: "feed_id"
+        in: "path"
+        required: true
+        type: "string"
+      - in: "body"
+        name: "body"
+        required: true
+        schema:
+          $ref: "#/definitions/Feed"
+      responses:
+        400:
+          description: "Invalid Feed supplied"
+        404:
+          description: "Feed not found"
+      x-swagger-router-controller: "Default"
+    delete:
+      operationId: "deleteFeed"
+      produces:
+      - "application/json"
+      parameters:
+      - name: "feed_id"
+        in: "path"
+        required: true
+        type: "string"
+      responses:
+        400:
+          description: "Invalid Feed supplied"
+        404:
+          description: "Feed not found"
+      x-swagger-router-controller: "Default"
+  /feeds/serve:
+    get:
+      operationId: "rss"
+      produces:
+      - "application/xml"
+      parameters: []
+      responses:
+        200:
+          description: "successful operation"
+          schema:
+            type: "string"
+        400:
+          description: "Invalid Feedname/password supplied"
+      x-swagger-router-controller: "Default"
+definitions:
+  Feed:
+    type: "object"
+    properties:
+      feed_id:
+        type: "string"
+      url:
+        type: "string"
+      image_url:
+        type: "string"
+      description:
+        type: "string"
+    xml:
+      name: "Feed"
