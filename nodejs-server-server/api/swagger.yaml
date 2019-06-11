@@ -21,7 +21,7 @@ paths:
           description: "successful operation"
           schema: {}
         400:
-          description: "Invalid Feedname/password supplied"
+          description: "Invalid params supplied"
       x-swagger-router-controller: "Default"
     post:
       operationId: "createFeed"
@@ -34,7 +34,7 @@ paths:
         schema:
           $ref: "#/definitions/Feed"
       responses:
-        default:
+        201:
           description: "successful operation"
       x-swagger-router-controller: "Default"
   /feeds/{feed_id}:
@@ -53,8 +53,10 @@ paths:
         schema:
           $ref: "#/definitions/Feed"
       responses:
+        201:
+          description: "successful operation"
         400:
-          description: "Invalid Feed supplied"
+          description: "Invalid params supplied"
         404:
           description: "Feed not found"
       x-swagger-router-controller: "Default"
@@ -68,16 +70,18 @@ paths:
         required: true
         type: "string"
       responses:
+        201:
+          description: "successful operation"
         400:
-          description: "Invalid Feed supplied"
+          description: "Invalid params supplied"
         404:
           description: "Feed not found"
       x-swagger-router-controller: "Default"
-  /feeds/serve:
+  /feeds/rss:
     get:
       operationId: "rss"
       produces:
-      - "application/xml"
+      - "application/rss+xml"
       parameters: []
       responses:
         200:
@@ -85,7 +89,21 @@ paths:
           schema:
             type: "string"
         400:
-          description: "Invalid Feedname/password supplied"
+          description: "Invalid params supplied"
+      x-swagger-router-controller: "Default"
+  /feeds/sync:
+    post:
+      operationId: "sync"
+      produces:
+      - "application/json"
+      parameters: []
+      responses:
+        201:
+          description: "successful operation"
+          schema:
+            type: "string"
+        400:
+          description: "Invalid params supplied"
       x-swagger-router-controller: "Default"
 definitions:
   Feed:
@@ -93,11 +111,23 @@ definitions:
     properties:
       feed_id:
         type: "string"
+        example: "reddit"
       url:
         type: "string"
+        example: "https://www.reddit.com/.rss"
       image_url:
         type: "string"
+        example: "https://www.reddit.com/favicon.ico"
       description:
         type: "string"
+        example: "reddit"
+      blacklist:
+        type: "array"
+        items:
+          type: "string"
+          example: "advertise*com*"
+      by:
+        type: "string"
+        example: "someone who added this feed"
     xml:
       name: "Feed"
