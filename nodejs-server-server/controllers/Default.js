@@ -47,6 +47,16 @@ module.exports.rss = function rss (req, res, next) {
     });
 };
 
+module.exports.sync = function sync (req, res, next) {
+  Default.sync()
+    .then(function (response) {
+      utils.writeJson(res, response);
+    })
+    .catch(function (response) {
+      utils.writeJson(res, response);
+    });
+};
+
 module.exports.updateFeed = function updateFeed (req, res, next) {
   var feed_id = req.swagger.params['feed_id'].value;
   var body = req.swagger.params['body'].value;

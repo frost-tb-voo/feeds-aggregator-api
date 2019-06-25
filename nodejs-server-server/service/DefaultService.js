@@ -1,18 +1,26 @@
 'use strict';
 
+require('dotenv').config()
+console.log(JSON.stringify(process.env,null,1))
+
 const base = process.env.BASE_URL || 'http://' + process.env.HOSTNAME + '/';
 const redisPort = process.env.REDIS_PORT || 6379;
 const redisHost = process.env.REDIS_HOST || '127.0.0.1';
+// const redisOptions = process.env.ioredis.options || {};
 
 const utils = require('../utils/writer.js');
-
 const Feed = require('feed').Feed;
-
 const Parser = require('rss-parser');
+const Redis = require('ioredis');
+
 let parser = new Parser();
 
-// const Redis = require('ioredis');
-// let redis = new Redis(redisPort, redisHost);
+let redis;
+// if (redisOptions.port || redisOptions.host) {
+//   redis = new Redis(redisOptions);
+// } else {
+  redis = new Redis(redisPort, redisHost);
+// }
 
 let feedIds = [];
 let feedsMap = {}; {
@@ -21,13 +29,18 @@ let feedsMap = {}; {
     "feed_id": feed_id,
     "url": 'https://www.reddit.com/.rss',
     // "url": 'https://www.lifehacker.jp/feed/index.xml',
-    "image_url": "string",
-    "description": "string"
+    "image_url": "https://www.reddit.com/favicon.ico",
+    "description": "reddit",
+    "blacklist": [
+      "advertise*com*"
+    ],
+    "by": "someone who added this feed"
   };
   feedIds.push(feed_id);
   feedsMap[feed_id] = feed;
 }
 
+let entries = {};
 
 /**
  *
@@ -45,22 +58,21 @@ exports.createFeed = function (body) {
         });
         reject(response);
       } else {
-        feedIds.push(feed_id);
-        feedsMap[feed_id] = body;
-        let response = utils.respondWithCode(201, {
-          code: 201
+        redis.set(feed_id, body).exec().then((result) => {
+          console.log(result);
+          feedIds.push(feed_id);
+          feedsMap[feed_id] = body;
+          let response = utils.respondWithCode(201, {
+            code: 201
+          });
+          resolve(response);
+        }).catch((err) => {
+          console.log(err);
+          let response = utils.respondWithCode(500, {
+            code: 500
+          });
+          reject(response);
         });
-        resolve(response);
-
-        // redis.set(feed_id, body).exec().then((result) => {
-        //   console.log(result);
-        // }).catch((err) => {
-        //   console.log(err);
-        //   let response = utils.respondWithCode(500, {
-        //     code: 500
-        //   });
-        //   reject(response);
-        // });
       }
     })
   });
@@ -81,22 +93,21 @@ exports.deleteFeed = function (feed_id) {
       });
       reject(response);
     } else {
-      delete feedIds[feedIds.indexOf(feed_id)];
-      delete feedsMap[feed_id];
-      let response = utils.respondWithCode(201, {
-        code: 201
-      });
-      resolve(response);
-      
-      // redis.del(feed_id).then((result) => {
-      //   console.log(result);
-      // }).catch((err) => {
-      //   console.log(err);
-      //   let response = utils.respondWithCode(500, {
-      //     code: 500
-      //   });
-      //   reject(response);
-      // })
+      redis.del(feed_id).then((result) => {
+        console.log(result);
+        delete feedIds[feedIds.indexOf(feed_id)];
+        delete feedsMap[feed_id];
+        let response = utils.respondWithCode(201, {
+          code: 201
+        });
+        resolve(response);
+      }).catch((err) => {
+        console.log(err);
+        let response = utils.respondWithCode(500, {
+          code: 500
+        });
+        reject(response);
+      })
     }
   });
 }
@@ -109,21 +120,20 @@ exports.deleteFeed = function (feed_id) {
 exports.readFeed = function () {
   return new Promise(function (resolve, reject) {
     console.log('read');
-    let feeds = [];
-    for (let feed_id in feedsMap) {
-      feeds.push(feedsMap[feed_id]);
-    }
-    let response = utils.respondWithCode(200, feeds);
-    resolve(response);
-
-    // redis.keys('*').then((results) => {
-    // }).catch((err) => {
-    //   console.log(err);
-    //   let response = utils.respondWithCode(500, {
-    //     code: 500
-    //   });
-    //   reject(response);
-    // });
+    redis.keys('*').then((results) => {
+      let feeds = [];
+      for (let feed_id in feedsMap) {
+        feeds.push(feedsMap[feed_id]);
+      }
+      let response = utils.respondWithCode(200, feeds);
+      resolve(response);
+    }).catch((err) => {
+      console.log(err);
+      let response = utils.respondWithCode(500, {
+        code: 500
+      });
+      reject(response);
+    });
   });
 }
 
@@ -148,21 +158,20 @@ exports.updateFeed = function (feed_id, body) {
       });
       reject(response);
     } else {
-      feedsMap[feed_id] = body;
-      let response = utils.respondWithCode(201, {
-        code: 201
+      redis.set(feed_id, body).then((result) => {
+        console.log(result);
+        feedsMap[feed_id] = body;
+        let response = utils.respondWithCode(201, {
+          code: 201
+        });
+        resolve(response);
+      }).catch((err) => {
+        console.log(err);
+        let response = utils.respondWithCode(500, {
+          code: 500
+        });
+        reject(response);
       });
-      resolve(response);
-
-      // redis.set(feed_id, body).then((result) => {
-      //   console.log(result);
-      // }).catch((err) => {
-      //   console.log(err);
-      //   let response = utils.respondWithCode(500, {
-      //     code: 500
-      //   });
-      //   reject(response);
-      // });
     }
   });
 }
@@ -186,18 +195,41 @@ exports.rss = function () {
       }
     });
 
+    for (let title in entries) {
+      myfeed.addItem(entries[title]);
+    }
+
+    let response = utils.respondWithCode(200, myfeed.rss2());
+    resolve(response);
+  });
+}
+
+
+/**
+ *
+ * returns String
+ **/
+exports.sync = function() {
+  return new Promise(async function(resolve, reject) {
     for (let feed_id in feedsMap) {
       try {
         let feed = await parser.parseURL(feedsMap[feed_id].url);
         for (let entry of feed.items) {
-          myfeed.addItem(entry);
+          if (entry.title in entries) {
+
+          } else {
+            console.log(entry.title)
+          }
+          entries[entry.title] = entry;
         }
       } finally {
 
       }
     }
 
-    let response = utils.respondWithCode(200, myfeed.rss2());
+    let response = utils.respondWithCode(201, {
+      code: 201
+    });
     resolve(response);
   });
 }
