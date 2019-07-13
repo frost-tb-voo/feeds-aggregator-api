@@ -16,10 +16,10 @@
     "connect": "^3.2.0",
     "cors": "^2.8.5",
     "dotenv": "^8.0.0",
-    "feed": "^3.0.0",
-    "ioredis": "^4.10.0",
+    "feed": "^4.0.0",
+    "ioredis": "^4.11.2",
     "js-yaml": "^3.3.0",
-    "rss-parser": "^3.7.1",
+    "rss-parser": "^3.7.2",
     "swagger-tools": "^0.10.4"
   }
 }
